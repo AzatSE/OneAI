@@ -67,14 +67,14 @@ async def get_access_token(
     user = authenticate_user(db, form_data.username, form_data.password)
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
-
+    # ACCESS
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username, "user_id": user.id, "type": "access"},
         expires_delta=access_token_expires
     )
 
-    # REFRESH TOKEN
+    # REFRESH
     jti = str(uuid.uuid4())
     refresh_token_expires = timedelta(days=settings.REFRESH_TOKEN_EXP_DAYS)
     refresh_token = create_refresh_token(
@@ -82,7 +82,6 @@ async def get_access_token(
         expires_delta=refresh_token_expires
     )
 
-    # Сохраняем сессию
     db.query(AuthSessions).filter(AuthSessions.user_id==user.id, AuthSessions.revoked==False).update({"revoked": True})
     new_session = AuthSessions(
         user_id=user.id,
@@ -94,11 +93,11 @@ async def get_access_token(
     db.commit()
     db.refresh(new_session)
 
-    # Устанавливаем HttpOnly cookie
+
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,  # защита от XSS
+        httponly=True,  # xss sec.
         secure=False,    # LOCAL FALSE
         samesite="lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES*60
@@ -112,12 +111,11 @@ async def get_access_token(
         max_age=settings.REFRESH_TOKEN_EXP_DAYS*24*60*60
     )
 
-    # Генерируем CSRF токен (JS сможет читать)
     csrf_token = str(uuid.uuid4())
     response.set_cookie(
         key="csrf_token",
         value=csrf_token,
-        httponly=False,  # JS читает и отправляет в заголовке X-CSRF-Token
+        httponly=False,  #JS can read and send X-CSRF-Token
         secure=False, #LOCAL FALSE
         samesite="lax"
     )
@@ -127,12 +125,12 @@ async def get_access_token(
 
 @router.post("/refresh")
 async def refresh_token(
-    response: Response,  # сначала без default
+    response: Response,
     db: Session = Depends(get_db),
     csrf_token_header: str = Header(None, alias="X-CSRF-Token"),
     refresh_token: str = Cookie(None),
 ):
-    # Проверка CSRF токена
+
     csrf_token_cookie = response.cookies.get("csrf_token")
     if csrf_token_header != csrf_token_cookie:
         raise HTTPException(status_code=403, detail="CSRF validation failed")
@@ -145,10 +143,9 @@ async def refresh_token(
     if not session or session.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Session invalid")
 
-    # Отмечаем старую сессию как отозванную
     session.revoked = True
 
-    # Создаём новый refresh токен
+
     new_jti = str(uuid.uuid4())
     new_refresh_token = create_refresh_token(
         data={"sub": payload["sub"], "type":"refresh", "jti": new_jti},
@@ -170,7 +167,7 @@ async def refresh_token(
     db.commit()
     db.refresh(new_session)
 
-    # установка cookie токенов
+
     response.set_cookie(
         key="access_token",
         value=access_token,
