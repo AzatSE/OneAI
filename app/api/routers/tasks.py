@@ -37,6 +37,8 @@ async def create_task(
     db.commit()
     db.refresh(new_task)
     return new_task
+
+
 @router.put("/tasks/{task_id}/completed")
 async def comlete_task(task_id: int, db: Session = Depends(get_db)):
     task = db.get(Task, task_id)

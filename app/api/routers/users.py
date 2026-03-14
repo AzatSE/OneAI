@@ -99,7 +99,7 @@ async def get_access_token(
         value=access_token,
         httponly=True,  # xss sec.
         secure=is_production,    # LOCAL FALSE
-        samesite="none",
+        samesite="none" if is_production else "lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES*60
     )
     response.set_cookie(
@@ -107,7 +107,7 @@ async def get_access_token(
         value=refresh_token,
         httponly=True,
         secure=is_production, #LOCAL FALSE
-        samesite="none",
+        samesite="none" if is_production else "lax",
         max_age=settings.REFRESH_TOKEN_EXP_DAYS*24*60*60
     )
 
@@ -116,8 +116,8 @@ async def get_access_token(
         key="csrf_token",
         value=csrf_token,
         httponly=False,  #JS can read and send X-CSRF-Token
-        secure=is_production, #LOCAL FALSE
-        samesite="none"
+        secure=is_production,
+        samesite="none" if is_production else "lax",
     )
 
     return {"message": "Logged in", "csrf_token": csrf_token}
@@ -172,16 +172,16 @@ async def refresh_token(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=is_production,  # локально False
-        samesite="none",
+        secure=is_production,
+        samesite="none" if is_production else "lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     response.set_cookie(
         key="refresh_token",
         value=new_refresh_token,
         httponly=True,
-        secure=is_production,  # локально False
-        samesite="none",
+        secure=is_production,
+        samesite="none" if is_production else "lax",
         max_age=settings.REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60
     )
 

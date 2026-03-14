@@ -47,13 +47,14 @@ class EditTask(Base):
 class TaskComlite(Base):
     comlite: bool
 
-class TaskRead(Base):
+class TaskRead(BaseModel):
     id: int
-    task:str
+    task: str
+    comlite: bool
+    user_id: int
 
     class Config:
         from_attributes = True
-
 
 
 
