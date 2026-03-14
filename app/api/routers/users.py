@@ -99,7 +99,7 @@ async def get_access_token(
         value=access_token,
         httponly=True,  # xss sec.
         secure=False,    # LOCAL FALSE
-        samesite="lax",
+        samesite="none",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES*60
     )
     response.set_cookie(
@@ -107,7 +107,7 @@ async def get_access_token(
         value=refresh_token,
         httponly=True,
         secure=False, #LOCAL FALSE
-        samesite="lax",
+        samesite="none",
         max_age=settings.REFRESH_TOKEN_EXP_DAYS*24*60*60
     )
 
@@ -117,7 +117,7 @@ async def get_access_token(
         value=csrf_token,
         httponly=False,  #JS can read and send X-CSRF-Token
         secure=False, #LOCAL FALSE
-        samesite="lax"
+        samesite="none"
     )
 
     return {"message": "Logged in", "csrf_token": csrf_token}
@@ -173,7 +173,7 @@ async def refresh_token(
         value=access_token,
         httponly=True,
         secure=False,  # локально False
-        samesite="lax",
+        samesite="none",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
     response.set_cookie(
@@ -181,7 +181,7 @@ async def refresh_token(
         value=new_refresh_token,
         httponly=True,
         secure=False,  # локально False
-        samesite="lax",
+        samesite="none",
         max_age=settings.REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60
     )
 
