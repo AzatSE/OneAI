@@ -81,3 +81,8 @@ class Tokens(Base):
 class RefreshRequest(Base):
     refresh_token: str
     token_type: str
+
+"""_________AI__________"""
+class TaskAdviceResponse(Base):
+    summary: str
+    suggestions: list[str]
