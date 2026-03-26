@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXP_DAYS: int
     SECRET_KEY: str
 
+    OPENAI_API_KEY: str
+
     ENV: str = "development"
 
     allowed_origins: Optional[List[str]] = None
