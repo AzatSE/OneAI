@@ -7,6 +7,9 @@ import json
 from app.models import Task
 from app.schemas import TaskAdviceResponse
 
+from typing import AsyncGenerator
+
+
 SYSTEM_PROMPT = """You are a personal productivity coach — sharp, focused, motivating.
 
 The user will give you a list of tasks.
@@ -26,11 +29,12 @@ Rules:
 - No generic advice
 - Respond in user's language
 
-Return strictly JSON:
-{
-  "summary": "...",
-  "suggestions": ["...", "...", "..."]
-}"""
+Format your response EXACTLY like this (no markdown, no extra text):
+SUMMARY: <your summary here>
+SUGGESTIONS:
+- <suggestion 1>
+- <suggestion 2>
+- <suggestion 3>"""
 
 class AIService:
     def __init__(self, client: AsyncOpenAI):
@@ -76,3 +80,37 @@ class AIService:
             summary=data["summary"],
             suggestions=data["suggestions"],
         )
+
+    async def get_advice_stream(self, db: Session, user_id: int) -> AsyncGenerator[str, None]:
+        tasks = db.execute(
+            select(Task)
+            .where(Task.user_id == user_id, Task.comlite.is_(False))
+            .order_by(Task.created_at.asc())
+            .limit(30)
+        ).scalars().all()
+
+        if not tasks:
+            yield json.dumps({
+                "summary": "You have no incomplete tasks. Great job!",
+                "suggestions": ["Add some tasks so I can help you plan."]
+            })
+            return
+
+        task_list = "\n".join(f"- ID {t.id}: {t.task}" for t in tasks)
+
+        stream = await self.client.chat.completions.create(
+            model="gpt-5-nano",
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"My tasks:\n{task_list}"},
+            ],
+            stream=True,
+            timeout=30.0,
+        )
+
+        yield " " * 1024 + "\n"
+
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content
+            if delta:
+                yield delta
