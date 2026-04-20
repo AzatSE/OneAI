@@ -67,7 +67,10 @@ class AIService:
         except APITimeoutError:
             raise HTTPException(504, "AI did not respond in time, please try again")
 
-        data = json.loads(response.choices[0].message.content)
+        try:
+            data = json.loads(response.choices[0].message.content)
+        except (json.JSONDecodeError, KeyError):
+            raise HTTPException(502, "AI returned an unexpected response format")
 
         return TaskAdviceResponse(
             summary=data["summary"],
