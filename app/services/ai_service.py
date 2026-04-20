@@ -1,4 +1,4 @@
-from openai import OpenAI, RateLimitError, APITimeoutError
+from openai import AsyncOpenAI, RateLimitError, APITimeoutError
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from fastapi import HTTPException
@@ -33,13 +33,13 @@ Return strictly JSON:
 }"""
 
 class AIService:
-    def __init__(self, client: OpenAI):
+    def __init__(self, client: AsyncOpenAI):
         self.client = client
 
     async def get_advice(self, db: Session, user_id: int) -> TaskAdviceResponse:
         tasks = db.execute(
             select(Task)
-            .where(Task.user_id == user_id, Task.comlite == False)
+            .where(Task.user_id == user_id, Task.complete.is_(False))
             .order_by(Task.created_at.asc())
             .limit(30)
         ).scalars().all()
