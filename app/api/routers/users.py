@@ -124,13 +124,13 @@ async def get_access_token(
     return {"message": "Logged in", "csrf_token": csrf_token}
 
 
-@router.post("/refresh")
+@router.post("/refresh_token")
 async def refresh_token(
     request: Request,
     response: Response,
     db: Session = Depends(get_db),
-    csrf_token_header: str = Header(None, alias="X-CSRF-Token"),
-    refresh_token: str = Cookie(None),
+    csrf_token_header: str = Header(..., alias="X-CSRF-Token"),
+    refresh_token: str = Cookie(...),
 ):
 
     csrf_token_cookie = request.cookies.get("csrf_token")
@@ -162,7 +162,10 @@ async def refresh_token(
 
     new_jti = str(uuid.uuid4())
     new_refresh_token = create_refresh_token(
-        data={"sub": payload["sub"], "type":"refresh", "jti": new_jti},
+        data={"sub": payload["sub"],
+              "type":"refresh",
+              "jti": new_jti
+              },
         expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXP_DAYS)
     )
     new_session = AuthSessions(
@@ -173,7 +176,11 @@ async def refresh_token(
     )
 
     access_token = create_access_token(
-        data={"sub": payload["sub"], "type":"access"},
+        data={"sub": payload["sub"],
+              "user_id": payload["user_id"],
+              "type":"access",
+
+              },
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
@@ -210,7 +217,18 @@ async def logout(response: Response):
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        samesite="lax",
         secure=is_production,
+        samesite="none" if is_production else "lax",
+    )
+    response.delete_cookie(
+        key="refresh_token",
+        httponly=True,
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+    )
+    response.delete_cookie(
+        key="csrf_token",
+        secure=is_production,
+        samesite="none" if is_production else "lax",
     )
     return {"message": "Logged out"}
