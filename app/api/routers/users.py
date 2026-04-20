@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 import uuid
-from fastapi import APIRouter, Depends, Cookie, Header, Response
+from fastapi import APIRouter, Depends, Cookie, Header, Response, Request
 from typing import Annotated
 import jwt
-from jwt import ExpiredSignatureError
+from jwt import ExpiredSignatureError, InvalidTokenError
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException,status
 from app.models import User,Task
@@ -125,25 +125,38 @@ async def get_access_token(
 
 @router.post("/refresh")
 async def refresh_token(
+    request: Request,
     response: Response,
     db: Session = Depends(get_db),
     csrf_token_header: str = Header(None, alias="X-CSRF-Token"),
     refresh_token: str = Cookie(None),
 ):
 
-    csrf_token_cookie = response.cookies.get("csrf_token")
+    csrf_token_cookie = request.cookies.get("csrf_token")
     if csrf_token_header != csrf_token_cookie:
         raise HTTPException(status_code=403, detail="CSRF validation failed")
 
-    payload = jwt.decode(refresh_token, settings.SECRET_KEY, settings.ALGORITHM)
-    if payload["type"] != "refresh":
+    try:
+        payload = jwt.decode(
+            refresh_token,
+            settings.SECRET_KEY,
+            algorithms=[settings.ALGORITHM]
+        )
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    if payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid token type")
+    if not payload.get("jti"):
+        raise HTTPException(status_code=401, detail="Invalid token")
 
     session = db.query(AuthSessions).filter(AuthSessions.jti==payload["jti"], AuthSessions.revoked==False).first()
     if not session or session.expires_at < datetime.now(timezone.utc):
         raise HTTPException(status_code=401, detail="Session invalid")
 
     session.revoked = True
+    db.add(session)
 
 
     new_jti = str(uuid.uuid4())
@@ -184,6 +197,8 @@ async def refresh_token(
         samesite="none" if is_production else "lax",
         max_age=settings.REFRESH_TOKEN_EXP_DAYS * 24 * 60 * 60
     )
+
+    return {"message": "Token refreshed"}
 
 @router.get("/users/me")
 async def get_users_me(current_user: User = Depends(get_current_user)):
