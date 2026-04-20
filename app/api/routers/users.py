@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import uuid
-from fastapi import APIRouter, Depends, Cookie, Header, Response, Request
+from fastapi import APIRouter, Cookie, Header, Response, Request
 from typing import Annotated
 import jwt
 from jwt import ExpiredSignatureError, InvalidTokenError
@@ -60,6 +60,7 @@ def create_user(
 
 @router.post("/token")
 async def get_access_token(
+    request: Request,
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: Session = Depends(get_db),
