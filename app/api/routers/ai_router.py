@@ -16,9 +16,9 @@ def get_ai_service() -> AIService:
 
 
 @router.get("/advice", response_model=TaskAdviceResponse)
-def get_task_advice(
+async def get_task_advice(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     ai: AIService = Depends(get_ai_service),
 ):
-    return ai.get_advice(db=db, user_id=current_user.id)
+    return await ai.get_advice(db=db, user_id=current_user.id)
