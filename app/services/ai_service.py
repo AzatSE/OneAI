@@ -36,7 +36,7 @@ class AIService:
     def __init__(self, client: OpenAI):
         self.client = client
 
-    def get_advice(self, db: Session, user_id: int) -> TaskAdviceResponse:
+    async def get_advice(self, db: Session, user_id: int) -> TaskAdviceResponse:
         tasks = db.execute(
             select(Task)
             .where(Task.user_id == user_id, Task.comlite == False)
@@ -53,7 +53,7 @@ class AIService:
         task_list = "\n".join(f"- ID {t.id}: {t.task}" for t in tasks)
 
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model="gpt-5-nano",
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
