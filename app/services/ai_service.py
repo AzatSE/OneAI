@@ -39,7 +39,7 @@ class AIService:
     async def get_advice(self, db: Session, user_id: int) -> TaskAdviceResponse:
         tasks = db.execute(
             select(Task)
-            .where(Task.user_id == user_id, Task.complete.is_(False))
+            .where(Task.user_id == user_id, Task.comlite.is_(False))
             .order_by(Task.created_at.asc())
             .limit(30)
         ).scalars().all()
